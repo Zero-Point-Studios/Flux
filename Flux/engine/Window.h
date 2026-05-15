@@ -58,5 +58,7 @@ namespace Flux {
 
 		void StartRuntimeEngine();
 		void StopRuntimeEngine();
+
+		bool m_stoppingRuntime = false;
 	};
 }

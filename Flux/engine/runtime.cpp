@@ -6,7 +6,7 @@
 namespace Flux
 {
 
-    void Runtime::Start(const std::string &projectName, const std::filesystem::path &projectPath,
+void Runtime::Start(const std::string &projectName, const std::filesystem::path &projectPath,
                     std::vector<SceneNode> &copiedNodes)
 {
     SDL_Init(SDL_INIT_VIDEO);
@@ -21,14 +21,26 @@ namespace Flux
     m_glContext = SDL_GL_CreateContext(m_window);
     SDL_GL_MakeCurrent(m_window, m_glContext);
 
-    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
+    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
+    {
         return;
     }
 
     SDL_GL_SetSwapInterval(1);
 
     m_renderer.Init();
-    m_gameNodes = copiedNodes;
+    m_renderer.InitSkybox();
+    
+    m_gameNodes.clear();
+
+    for (const auto node : copiedNodes) {
+        SceneNode newNode = node;
+        if (node.model != nullptr) {
+            newNode.model = std::make_shared<Model>(node.model->path); 
+        }
+
+        m_gameNodes.push_back(newNode);
+    }
 
     m_luaEngine.init();
     m_luaEngine.runAllScriptsInFolder(projectPath.string());
@@ -39,16 +51,32 @@ namespace Flux
     SDL_GL_MakeCurrent(NULL, NULL);
 }
 
+void Runtime::SyncCamera(glm::vec3 editorPos, glm::vec3 editorTarget)
+{
+    this->cameraPos = editorPos;
+    this->cameraTarget = editorTarget;
+}
 void Runtime::Update()
 {
-    if (!isRunning) return;
+    if (!isRunning)
+        return;
 
     SDL_GL_MakeCurrent(m_window, m_glContext);
 
     SDL_Event e;
     while (SDL_PollEvent(&e))
-        if (e.type == SDL_EVENT_QUIT) { Runtime::Stop(); return; }
-
+    {
+        if (e.type == SDL_EVENT_QUIT) 
+        { 
+            m_luaEngine.stop();
+            m_luaEngine.isRunning = false;
+            
+            SDL_GL_MakeCurrent(NULL, NULL); 
+            
+            this->Stop(); 
+            return;
+        }
+    }
     m_luaEngine.step();
 
     int w, h;
@@ -59,16 +87,17 @@ void Runtime::Update()
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -5.0f));
-    glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)w / (float)h, 0.1f, 100.0f);
+    glm::mat4 proj = glm::perspective(glm::radians(70.0f), (float)w / (float)h, 0.1f, 2000.0f);
+    glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, glm::vec3(0, 1, 0));
 
-    for (auto& node : m_gameNodes)
+    m_renderer.DrawSkybox(view, proj, glm::vec3(190, 190, 190), 20.0f, false);
+
+    for (auto &node : m_gameNodes)
     {
-        if (node.model)
+        if (node.model != nullptr)
         {
-            m_renderer.DrawScene(*node.model, node.textureID,
-                                 node.GetTransformMatrix(), view, proj,
-                                 glm::vec3(0), m_gameNodes);
+            glm::mat4 model = node.GetTransformMatrix();
+            m_renderer.DrawScene(*node.model, node.textureID, model, view, proj, cameraPos, m_gameNodes);
         }
     }
 
@@ -78,10 +107,22 @@ void Runtime::Update()
 
 void Runtime::Stop()
 {
+    if (!isRunning) return; 
+
     m_luaEngine.stop();
-    if (m_glContext) SDL_GL_DestroyContext(m_glContext);
-    if (m_window) SDL_DestroyWindow(m_window);
-    SDL_Quit();
+
+    if (m_glContext) {
+        SDL_GL_DestroyContext(m_glContext);
+        m_glContext = nullptr; 
+    }
+    
+    if (m_window) {
+        SDL_DestroyWindow(m_window);
+        m_window = nullptr; 
+    }
+
+    SDL_QuitSubSystem(SDL_INIT_VIDEO); 
+    
     isRunning = false;
 }
 

@@ -77,25 +77,18 @@ namespace Flux {
 	}
 
 	void Ribbon::drawProjectControls() {
-		if (ImGui::Button(luaEnginePtr->isRunning ? "Stop" : "Play")) {
-			luaEnginePtr->isRunning = !luaEnginePtr->isRunning;
+		if (luaEnginePtr == nullptr || textEditorPtr == nullptr) return;
 
-			if (luaEnginePtr == nullptr && textEditorPtr == nullptr) return;
-
-			std::string codeToRun = textEditorPtr->GetText();
-
-			if (luaEnginePtr->isRunning) {
-				luaEnginePtr->runScript(codeToRun);
+		if (ImGui::Button(editorLocked ? "Stop" : "Play")) {
+			if (!editorLocked) {
 				luaEnginePtr->isRunning = true;
+				editorLocked = true;
 			} else {
-				if (luaEnginePtr != nullptr) {
-					luaEnginePtr->stop();
-					luaEnginePtr->isRunning = false;
-				}
+				luaEnginePtr->isRunning = false;
+				editorLocked = false;
 			}
 
-			editorLocked = !editorLocked;
-        	playToggledFrame = true;
+			playToggledFrame = true;
 		}
 	}
 }

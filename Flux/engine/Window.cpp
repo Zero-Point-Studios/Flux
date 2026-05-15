@@ -172,15 +172,6 @@ namespace Flux
             m_luaEngine.step();
         }
 
-        if (m_ribbon.playToggledFrame) {
-            if (m_ribbon.editorLocked) {
-                StartRuntimeEngine();
-            } else {
-                StopRuntimeEngine();
-            }
-            m_ribbon.playToggledFrame = false;
-        }
-
         if (m_ribbon.editorLocked) {
             ImGui::BeginDisabled(true);
         }
@@ -193,6 +184,16 @@ namespace Flux
             ImGui::EndDisabled(); 
         }
         m_ribbon.renderRibbon();
+
+        if (m_ribbon.playToggledFrame) {
+            if (m_ribbon.editorLocked) {
+                StartRuntimeEngine();
+            } else {
+                StopRuntimeEngine();
+            }
+            m_ribbon.playToggledFrame = false;
+        }
+
         m_output.renderOutput();
         
         
@@ -240,7 +241,16 @@ namespace Flux
         glfwPollEvents();
 
         glfwMakeContextCurrent(NULL); 
+
+        m_runtime.SyncCamera(m_viewport.camera->Position, m_viewport.camera->Position + m_viewport.camera->Front);
+
         m_runtime.Update(); 
+
+       if (!m_runtime.isRunning && m_ribbon.editorLocked && !m_stoppingRuntime) {
+            m_stoppingRuntime = true;
+            StopRuntimeEngine();
+            m_stoppingRuntime = false;
+        }
         
         glfwMakeContextCurrent(m_window);
 
@@ -269,8 +279,15 @@ namespace Flux
 
     void Window::StopRuntimeEngine() {
         m_runtime.Stop();
+
+        if (m_ribbon.luaEnginePtr) {
+            m_ribbon.luaEnginePtr->isRunning = false;
+        }
+
+        m_ribbon.editorLocked = false;
+
         m_runtimeNodes.clear();
 
-        Output::addLog("Stopping runtime engine...");
+        Output::addLog("Runtime stopped.");
     }
 }

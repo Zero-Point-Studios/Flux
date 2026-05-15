@@ -31,6 +31,8 @@ namespace Flux {
         void Init();
         void RenderViewport(Heiarchy& heiarchy);
 
+        std::unique_ptr<Camera> camera;
+
         std::filesystem::path activeProjectPath;
         bool showGrid     = true;
         bool vsyncEnabled = true;
@@ -38,7 +40,6 @@ namespace Flux {
     private:
         std::unique_ptr<OpenGLManager> glManager;
         std::unique_ptr<Renderer3D>    renderer;
-        std::unique_ptr<Camera>        camera;
 
         std::shared_ptr<Model> ghostModel;
         std::string            ghostPath;
