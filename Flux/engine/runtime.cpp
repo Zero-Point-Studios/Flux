@@ -9,6 +9,12 @@ namespace Flux
 void Runtime::Start(const std::string &projectName, const std::filesystem::path &projectPath,
                     std::vector<SceneNode> &copiedNodes)
 {
+    if (!std::filesystem::exists(projectPath) || !std::filesystem::is_directory(projectPath)) {
+        std::cerr << "RUNTIME ERROR: Project folder is missing at: " << projectPath << "\n";
+        Output::addLog("RUNTIME ERROR: Project folder is missing at: " + projectPath.string());
+        return;
+    }
+    
     SDL_Init(SDL_INIT_VIDEO);
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -35,6 +41,9 @@ void Runtime::Start(const std::string &projectName, const std::filesystem::path 
 
     for (const auto node : copiedNodes) {
         SceneNode newNode = node;
+        if (newNode.type == NodeType::Camera) {
+            newNode.model = nullptr;
+        }
         if (node.model != nullptr) {
             newNode.model = std::make_shared<Model>(node.model->path); 
         }
@@ -42,9 +51,13 @@ void Runtime::Start(const std::string &projectName, const std::filesystem::path 
         m_gameNodes.push_back(newNode);
     }
 
+    m_luaEngine.activeNodes = &m_gameNodes;
+
     m_luaEngine.init();
-    m_luaEngine.runAllScriptsInFolder(projectPath.string());
+    m_luaEngine.bindEngineAPI();
     m_luaEngine.isRunning = true;
+
+    m_luaEngine.runAllScriptsInFolder(projectPath.string());
 
     isRunning = true;
 
@@ -93,15 +106,30 @@ void Runtime::Update()
     glm::mat4 proj = glm::perspective(glm::radians(70.0f), (float)w / (float)h, 0.1f, 2000.0f);
     glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, glm::vec3(0, 1, 0));
 
+    for (auto& node : m_gameNodes) {
+        if (node.isLightingNode) {
+            gameTime = node.light.timeOfDay;
+            gameSunDir = node.light.direction;
+            break;
+        }
+    }
+
+    for (auto& node : m_gameNodes) {
+        if (node.type == NodeType::Camera && node.isMainCamera) {
+            glm::mat4 transform = node.GetTransformMatrix();
+            glm::vec3 camPos = node.position;
+            glm::vec3 camFront = glm::normalize(glm::vec3(transform * glm::vec4(0, 0, -1, 0)));
+            glm::vec3 camUp = glm::normalize(glm::vec3(transform * glm::vec4(0, 1, 0, 0)));
+
+            view = glm::lookAt(camPos, camPos + camFront, camUp);
+            break;
+        }
+    }
+
     m_renderer.DrawSkybox(view, proj, gameSunDir, gameTime, true);
 
     for (auto &node : m_gameNodes)
     {
-        if (node.isLightingNode) {
-            gameTime = node.light.timeOfDay;
-            gameSunDir = node.light.direction;
-        }
-
         if (node.model != nullptr)
         {
             glm::mat4 model = node.GetTransformMatrix();

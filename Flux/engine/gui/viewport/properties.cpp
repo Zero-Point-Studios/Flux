@@ -234,6 +234,20 @@ void Properties::renderProperties(Heiarchy* h) {
     DragVec3Row("Scale",    node.scale,    0.01f);
     ImGui::EndTable();
 
+    if (node.type == NodeType::Camera) {
+        ImGui::Separator();
+        ImGui::Text("Camera Settings");
+        ImGui::Spacing();
+        
+        if (ImGui::Checkbox("Main Camera", &node.isMainCamera)) {
+            if (node.isMainCamera) {
+                for (auto& otherNode : h->nodes) {
+                    if (&otherNode != &node) otherNode.isMainCamera = false;
+                }
+            }
+        }
+    }
+
     if (node.type == NodeType::Mesh) {
         ImGui::Separator();
         ImGui::Text("Surface");
@@ -290,7 +304,6 @@ void Properties::renderProperties(Heiarchy* h) {
         }
         ImGui::EndTable();
     }
-
     ImGui::End();
 }
 
