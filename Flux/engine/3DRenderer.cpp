@@ -10,14 +10,19 @@ namespace Flux
 {
     static std::string LoadShaderFromFile(const std::string& filepath)
     {
-        std::ifstream file(filepath);
-        if (!file.is_open()) {
-            std::cerr << "Shader load error: cannot open " << filepath << "\n";
+        size_t size;
+        char* shaderCode = (char*)SDL_LoadFile(filepath.c_str(), &size);
+
+        if (!shaderCode) {
+            std::cerr << "Failed to load shader file: " << filepath << " - " << SDL_GetError() << std::endl;
+            Output::addLog("SHADER ERROR: Could not find " + filepath);
             return "";
         }
-        std::stringstream ss;
-        ss << file.rdbuf();
-        return ss.str();
+
+        std::string result(shaderCode, size);
+
+        SDL_free(shaderCode);
+        return result;
     }
 
     static unsigned int compileShader(GLenum type, const char* src)

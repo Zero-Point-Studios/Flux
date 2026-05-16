@@ -17,7 +17,8 @@ namespace Flux {
         DirectionalLight,
         PointLight,
         SpotLight,
-        SurfaceLight
+        SurfaceLight,
+        Camera
     };
 
     struct LightData {
@@ -67,6 +68,7 @@ namespace Flux {
         LightData light;
 
         bool isLightingNode = false;
+        bool isMainCamera = false;
         bool isLocked = false;
 
         glm::mat4 GetTransformMatrix() const {

@@ -33,6 +33,7 @@ namespace Flux {
         std::vector<Mesh> meshes;
 
         Model(const std::string& modelPath) : path(modelPath) { Load(); }
+        ~Model();
 
         void Load();
         void Draw(float alphaOverride = 1.0f);

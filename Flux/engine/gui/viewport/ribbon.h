@@ -20,6 +20,9 @@ namespace Flux {
 		public:
 			void renderRibbon();
 
+			bool playToggledFrame = false;
+			bool editorLocked = false;
+
 			LuaEngine* luaEnginePtr = nullptr;
 			::TextEditor* textEditorPtr = nullptr;
 		private:

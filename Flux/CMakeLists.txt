@@ -37,6 +37,8 @@ add_executable(Flux
         engine/gui/texteditor.cpp
         engine/luaEngine.h
         engine/luaEngine.cpp
+        engine/runtime.h
+        engine/runtime.cpp
 )
 
 if (NOT WIN32)

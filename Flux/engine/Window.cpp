@@ -71,6 +71,8 @@ namespace Flux
         m_ribbon.textEditorPtr = &m_texteditor;
         m_texteditor.SetLanguageDefinition(TextEditor::LanguageDefinition::Lua());
 
+        m_viewport.ribbonPtr = &m_ribbon;
+
         m_viewport.Init();
         m_heiarchy.setup();
         m_luaEngine.init();
@@ -171,13 +173,30 @@ namespace Flux
         if (m_luaEngine.isRunning) {
             m_luaEngine.step();
         }
+
+        if (m_ribbon.editorLocked) {
+            ImGui::BeginDisabled(true);
+        }
         
         m_viewport.RenderViewport(m_heiarchy);
         m_explorer.renderExplorer(m_viewport);
-        m_ribbon.renderRibbon();
-        m_output.renderOutput();
         m_properties.renderProperties(&m_heiarchy);
         m_heiarchy.renderHeiarchy(m_viewport.activeProjectPath);
+        if (m_ribbon.editorLocked) {
+            ImGui::EndDisabled(); 
+        }
+        m_ribbon.renderRibbon();
+
+        if (m_ribbon.playToggledFrame) {
+            if (m_ribbon.editorLocked) {
+                StartRuntimeEngine();
+            } else {
+                StopRuntimeEngine();
+            }
+            m_ribbon.playToggledFrame = false;
+        }
+
+        m_output.renderOutput();
         
         
         if (m_explorer.isEditorVisible) {
@@ -222,12 +241,55 @@ namespace Flux
         }
 
         glfwPollEvents();
+
+        glfwMakeContextCurrent(NULL); 
+
+        m_runtime.SyncCamera(m_viewport.camera->Position, m_viewport.camera->Position + m_viewport.camera->Front);
+
+        m_runtime.Update(); 
+
+       if (!m_runtime.isRunning && m_ribbon.editorLocked && !m_stoppingRuntime) {
+            m_stoppingRuntime = true;
+            StopRuntimeEngine();
+            m_stoppingRuntime = false;
+        }
+        
+        glfwMakeContextCurrent(m_window);
+
         glfwSwapBuffers(m_window);
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
     void Window::clear(float r, float g, float b, float a)
     {
         glClearColor(r, g, b, a);
         glClear(GL_COLOR_BUFFER_BIT);
+    }
+
+
+    void Window::StartRuntimeEngine() {
+        Output::addLog("Starting runtime engine...");
+
+        std::string projName = m_explorer.projectRoot.name;
+        if (projName == "Project" || projName.empty()) projName = "Flux Game";
+
+        m_runtimeNodes = m_heiarchy.nodes;
+        
+        m_runtime.Start(projName, m_explorer.activeFolderPath, m_runtimeNodes);
+    }
+
+    void Window::StopRuntimeEngine() {
+        m_runtime.Stop();
+
+        if (m_ribbon.luaEnginePtr) {
+            m_ribbon.luaEnginePtr->isRunning = false;
+        }
+
+        m_ribbon.editorLocked = false;
+
+        m_runtimeNodes.clear();
+
+        Output::addLog("Runtime stopped.");
     }
 }

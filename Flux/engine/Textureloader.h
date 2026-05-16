@@ -4,9 +4,12 @@
 #include <vector>
 #include <unordered_map>
 #include "stb_image.h"
+#include <SDL3/SDL.h>
+#include "../engine/gui/viewport/output.h"
 
 namespace Flux {
 
+    class Output;
     class TextureLoader {
     public:
         static TextureLoader& Get() {
