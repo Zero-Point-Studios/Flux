@@ -7,15 +7,44 @@
 
 namespace Flux {
 
+    Model::~Model() {
+        for (auto& mesh : meshes) {
+            glDeleteVertexArrays(1, &mesh.VAO);
+            glDeleteBuffers(1, &mesh.VBO);
+            glDeleteBuffers(1, &mesh.EBO);
+        }
+    }
+
 void Model::Load() {
+    for (auto& mesh : meshes) {
+        glDeleteVertexArrays(1, &mesh.VAO);
+        glDeleteBuffers(1, &mesh.VBO);
+        glDeleteBuffers(1, &mesh.EBO);
+    }
+
+    meshes.clear();
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(
-        path,
-        aiProcess_Triangulate | aiProcess_GenNormals |
-        aiProcess_FlipUVs     | aiProcess_CalcTangentSpace);
+
+    size_t fileSize;
+    void* fileBuffer = SDL_LoadFile(path.c_str(), &fileSize);
+
+    if (!fileBuffer) {
+        std::cerr << "Failed to load model file: " << path << " - " << SDL_GetError() << std::endl;
+        Output::addLog("MODEL ERROR: Failed to load model file: " + path);
+        return;
+    }
+
+    const aiScene* scene = importer.ReadFileFromMemory(
+        fileBuffer, fileSize,
+        aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace,
+        ".obj" 
+    );
+
+    SDL_free(fileBuffer);
 
     if (!scene || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) || !scene->mRootNode) {
-        std::cerr << "ASSIMP: Could not read " << path << "\n";
+        std::cerr << "ASSIMP: Could not parse buffer from " << path << "\n";
+        Output::addLog("MODEL ERROR: Could not parse buffer from " + path);
         return;
     }
 

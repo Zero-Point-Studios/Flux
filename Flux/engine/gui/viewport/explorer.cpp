@@ -5,7 +5,6 @@
 
 namespace Flux
 {
-
 	std::filesystem::path Explorer::resolveUniqueName(
 	    const std::filesystem::path& parentDir,
 	    const std::string& baseStem,
@@ -81,6 +80,21 @@ namespace Flux
 					          << std::filesystem::current_path() << "\n";
 				}
 			}
+
+			if (ImGui::MenuItem("Open existing project")) {
+				auto selection = pfd::select_folder("Select a project folder").result();
+
+				if (!selection.empty()) {
+					std::filesystem::path selectedPath(selection);
+
+					activeFolderPath = selectedPath;
+					projectRoot.path = selectedPath;
+					projectRoot.name = selectedPath.filename().string();
+					syncFiles(selectedPath, projectRoot);
+					scanForBackups();
+				}
+			}
+
 			ImGui::EndPopup();
 		}
 
@@ -115,11 +129,21 @@ namespace Flux
 			ImGui::Text("Save Location:");
 			ImGui::InputText("##projlocation", projectLocationBuf, sizeof(projectLocationBuf));
 
+			ImGui::SameLine();
+
+			if (ImGui::Button("Browse...")) {
+				auto selection = pfd::select_folder("Choose where to save your project").result();
+
+				if (!selection.empty()) {
+					std::strncpy(projectLocationBuf, selection.c_str(), sizeof(projectLocationBuf) - 1);
+				}
+			}
+
 			ImGui::Spacing();
 			bool nameEmpty = (newProjectNameBuf[0] == '\0');
 			float btnW = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
 
-			if (nameEmpty) ImGui::EndDisabled();
+			if (nameEmpty) ImGui::BeginDisabled();
 
 			if (ImGui::Button("Create", ImVec2(120, 0))) {
 				std::filesystem::path docsBase = std::filesystem::path(projectLocationBuf);
@@ -142,8 +166,9 @@ namespace Flux
 
 			ImGui::SameLine();
 
-			if (ImGui::Button("Cancel", ImVec2(btnW, 0)))
+			if (ImGui::Button("Cancel", ImVec2(btnW, 0))) {
 				ImGui::CloseCurrentPopup();
+			}
 
 			ImGui::EndPopup();
 		}
@@ -180,6 +205,8 @@ namespace Flux
 
 	void Explorer::DrawVirtualNodes(virtualFile& file) {
 		std::string uid = "##" + std::to_string(reinterpret_cast<uintptr_t>(&file));
+
+		if (file.name == ".flux" && file.type == fileType::Folder) return;
 
 		if (renamingNode == &file) {
 			ImGui::SetNextItemWidth(-1);
@@ -322,7 +349,44 @@ namespace Flux
 			}
 
 		} else {
-			ImGui::Selectable((file.name + uid).c_str());
+			std::string dispName = file.name;
+
+			bool hasBackup = std::find(filesWithBackups.begin(), filesWithBackups.end(), file.path) != filesWithBackups.end();
+
+			bool isCurrentlyOpen = (activeFilePath == file.path);
+
+			if (isCurrentlyOpen && textEditor != nullptr) {
+				if (textEditor->IsTextChanged()) {
+					isEditorUnsaved = true;
+				}
+			}
+
+			if ((isCurrentlyOpen && isEditorUnsaved) || hasBackup) {
+				dispName += " *";
+			}
+
+			std::string uid = "##" + std::to_string(reinterpret_cast<uintptr_t>(&file));
+			ImGui::Selectable((dispName + uid).c_str());
+
+			if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+				if (file.path.extension() == ".lua") {
+					if (textEditor != nullptr) {
+						activeScriptName = file.name;
+						activeFilePath = file.path;
+
+						std::ifstream ifs(file.path);
+						if (ifs.is_open()) {
+							std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
+							
+							textEditor->SetText(content); 
+							isEditorVisible = true;
+							ifs.close();
+						}
+
+						ImGui::SetWindowFocus("Text Editor");
+					}
+				}
+			}
 
 			if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
 				std::string payloadPath = file.path.string();
@@ -351,7 +415,6 @@ namespace Flux
 			}
 		}
 	}
-
 
 	void Explorer::syncFiles(const std::filesystem::path& path, virtualFile& node)
 	{
@@ -427,6 +490,20 @@ namespace Flux
 			refreshPath      = activeFolderPath;
 		} catch (const std::filesystem::filesystem_error& e) {
 			std::cerr << "Folder Creation Failed: " << e.what() << "\n";
+		}
+	}
+
+	void Explorer::scanForBackups() {
+		filesWithBackups.clear();
+		std::filesystem::path backupDir = activeFolderPath / ".flux" / "backups";
+
+		if (std::filesystem::exists(backupDir)) {
+			for (const auto& entry : std::filesystem::directory_iterator(backupDir)) {
+				if (entry.path().extension() == ".tmp") {
+					std::string originalName = entry.path().stem().string();
+					filesWithBackups.push_back(activeFolderPath / originalName);
+				}
+			}
 		}
 	}
 }

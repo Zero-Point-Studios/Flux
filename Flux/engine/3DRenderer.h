@@ -4,6 +4,8 @@
 #include <vector>
 #include "Model.h"
 #include "./mechanics/Scenenode.h"
+#include <SDL3/SDL.h>
+#include "gui/viewport/output.h"
 
 namespace Flux {
 

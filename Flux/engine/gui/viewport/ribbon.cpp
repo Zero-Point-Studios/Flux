@@ -59,8 +59,16 @@ namespace Flux {
 
 	void Ribbon::drawEditMenu() {
 		if (ImGui::BeginMenu("Edit")) {
-			if (ImGui::MenuItem("Undo")) {}
-			if (ImGui::MenuItem("Redo")) {}
+			if (ImGui::MenuItem("Undo")) {
+				if (textEditorPtr) {
+					textEditorPtr->Undo(); 
+				}
+			}
+			if (ImGui::MenuItem("Redo")) {
+				if (textEditorPtr) {
+					textEditorPtr->Redo();
+				}
+			}
 			if (ImGui::MenuItem("Viewport Settings", nullptr, showSettings)) {
 				showSettings = !showSettings;
 			}
@@ -69,8 +77,18 @@ namespace Flux {
 	}
 
 	void Ribbon::drawProjectControls() {
-		if (ImGui::Button("Play")) {}
-		ImGui::SameLine();
-		if (ImGui::Button("Pause")) {}
+		if (luaEnginePtr == nullptr || textEditorPtr == nullptr) return;
+
+		if (ImGui::Button(editorLocked ? "Stop" : "Play")) {
+			if (!editorLocked) {
+				luaEnginePtr->isRunning = true;
+				editorLocked = true;
+			} else {
+				luaEnginePtr->isRunning = false;
+				editorLocked = false;
+			}
+
+			playToggledFrame = true;
+		}
 	}
 }

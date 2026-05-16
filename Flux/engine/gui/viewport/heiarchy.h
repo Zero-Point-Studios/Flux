@@ -22,6 +22,8 @@ namespace Flux {
         void AddModel(const std::string& path, const std::string& name = "");
         void AddLight(NodeType type, const std::string& name = "");
 
+        void AddCamera(const std::string& name = "");
+
         std::string GetUniqueName(const std::string& baseName);
 
         SceneNode* GetLightingNode();

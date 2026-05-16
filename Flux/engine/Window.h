@@ -16,10 +16,16 @@
 #include "./gui/viewport/output.h"
 #include "./gui/viewport/properties.h"
 #include "./gui/viewport/heiarchy.h"
+#include "./gui/texteditor.h"
+#include "luaEngine.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "stb_image.h"
+
+#include "runtime.h"
+
+#include <SDL3/SDL.h> // For runtime
 
 namespace Flux {
 	class Window
@@ -35,6 +41,8 @@ namespace Flux {
 		GLFWwindow* getNativeWindow() const { return m_window; };
 
 	private:
+		std::vector<SceneNode> m_runtimeNodes;
+
 		GLFWwindow* m_window;
 		int m_width, m_height;
 		std::string m_title;
@@ -44,5 +52,13 @@ namespace Flux {
 		Output m_output;
 		Properties m_properties;
 		Heiarchy m_heiarchy;
+		TextEditor m_texteditor;
+		LuaEngine m_luaEngine;
+		Runtime m_runtime;
+
+		void StartRuntimeEngine();
+		void StopRuntimeEngine();
+
+		bool m_stoppingRuntime = false;
 	};
 }

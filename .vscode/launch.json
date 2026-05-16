@@ -10,7 +10,7 @@
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "console": "integratedTerminal",
+            "externalConsole": true, 
             "preLaunchTask": "CMake: build"
         }
     ]

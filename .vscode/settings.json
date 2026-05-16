@@ -13,4 +13,7 @@
     ],
     "C_Cpp.intelliSenseEngine": "disabled",
     "cmake.buildType": "Release",
+    "cmake.debugConfig": {
+        "externalConsole": true
+    }
 }

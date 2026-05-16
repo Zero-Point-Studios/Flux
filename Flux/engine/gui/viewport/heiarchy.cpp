@@ -67,14 +67,25 @@ void Heiarchy::setup() {
 
 std::string Heiarchy::GetUniqueName(const std::string& baseName) {
     std::string name = baseName;
+
+    size_t openParen = name.find_last_of('(');
+    size_t closeParen = name.find_last_of(')');
+    if (openParen != std::string::npos && closeParen != std::string::npos && closeParen > openParen) {
+        name = name.substr(0, openParen - 1); 
+    }
+
+    std::string strippedBase = name;
     int counter = 1;
+
     for (;;) {
         bool clash = false;
-        for (const auto& n : nodes)
+        for (const auto& n : nodes) {
             if (n.name == name) { clash = true; break; }
+        }
         if (!clash) break;
-        name = baseName + " (" + std::to_string(counter++) + ")";
+        name = strippedBase + " (" + std::to_string(counter++) + ")";
     }
+    
     return name;
 }
 
@@ -116,6 +127,30 @@ void Heiarchy::AddLight(NodeType type, const std::string& name) {
     }
     nodes.push_back(n);
     selectedIndex = (int)nodes.size() - 1;
+}
+
+void Heiarchy::AddCamera(const std::string& name) {
+    SceneNode n;
+    n.type = NodeType::Camera;
+    n.name = GetUniqueName(name.empty() ? "Camera" : name);
+
+    bool hasMain = false;
+    for (auto& node : nodes) {
+        if (node.isMainCamera) {
+            hasMain = true;
+            break;
+        }
+    }
+    if (!hasMain) n.isMainCamera = true;
+
+    std::string iconPath = PathHelper::GetAssetPath("assets/icons/camera.png");
+    if (std::filesystem::exists(iconPath)) n.textureID = TextureLoader::Load(iconPath);
+
+    std::string modelPath = PathHelper::GetAssetPath("assets/models/camera.obj");
+    if (std::filesystem::exists(modelPath)) n.model = GetOrLoadModel(modelPath);
+
+    nodes.push_back(n);
+    selectedIndex = (int)nodes.size() -1;
 }
 
 void Heiarchy::DrawNode(int index) {
@@ -248,6 +283,9 @@ void Heiarchy::renderHeiarchy(const std::filesystem::path& activeProjectPath) {
 
     if (ImGui::BeginPopupContextItem("##hierEmpty")) {
         if (ImGui::BeginMenu("Add Object")) {
+            if (ImGui::MenuItem("Camera")) {
+                AddCamera();
+            }
             if (ImGui::BeginMenu("Mesh")) {
                 auto tryAdd = [&](const char* rel, const char* addName) {
                     std::string full = PathHelper::GetAssetPath(std::string("assets/models/") + rel);
@@ -260,6 +298,7 @@ void Heiarchy::renderHeiarchy(const std::filesystem::path& activeProjectPath) {
                 if (ImGui::MenuItem("Cube"))   tryAdd("cube.obj",   "Cube");
                 if (ImGui::MenuItem("Sphere")) tryAdd("sphere.obj", "Sphere");
                 if (ImGui::MenuItem("Monkey")) tryAdd("monkey.obj", "Monkey");
+                if (ImGui::MenuItem("Plane")) tryAdd("plane.obj", "Plane");
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Light")) {

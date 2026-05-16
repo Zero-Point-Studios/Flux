@@ -49,6 +49,7 @@ Flux is built on the shoulders of giants. We use modern 2026 techniques and thes
 - [stb_image](https://github.com/nothings/stb) - Single-file image loading
 - [ImGuizmo](https://github.com/cedricguillemet/imguizmo) - Manipulate objects directly in the viewport
 - [LinuxDeploy](https://github.com/linuxdeploy/linuxdeploy) - Used to make AppImages for Linux
+- [ImGuiColorTextEdit](https://github.com/BalazsJako/ImGuiColorTextEdit) - Credits to BalazsJako for making this, ImGuiColorTextEdit is now the foundation of the text editor and has solved one of my biggest problems making this project.
 
 ## Top Contributors
 

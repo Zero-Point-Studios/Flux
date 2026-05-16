@@ -37,12 +37,25 @@ namespace Flux {
         auto it = cache.find(path);
         if (it != cache.end()) return it->second;
 
-        stbi_set_flip_vertically_on_load(true);
+        size_t fileSize;
+        void* fileBuffer = SDL_LoadFile(path.c_str(), &fileSize);
 
+        if (!fileBuffer) {
+            std::cerr << "Failed to load file: " << path << " - " << SDL_GetError() << std::endl;
+            Output::addLog("SDL3 ERROR: Failed to load texture file: " + path);
+            return 0;
+        }
+
+        stbi_set_flip_vertically_on_load(true);
         int w, h, ch;
-        unsigned char* data = stbi_load(path.c_str(), &w, &h, &ch, 0);
+
+        unsigned char* data = stbi_load_from_memory((unsigned char*)fileBuffer, (int)fileSize, &w, &h, &ch, 0);
+
+        SDL_free(fileBuffer);
+
         if (!data) {
-            std::cerr << "TextureLoader: failed to load " << path << "\n";
+            std::cerr << "Failed to parse image: " << path << std::endl;
+            Output::addLog("STB_IMAGE ERROR: Failed to parse texture file: " + path);
             return 0;
         }
 
@@ -53,12 +66,11 @@ namespace Flux {
         glBindTexture(GL_TEXTURE_2D, id);
         glTexImage2D(GL_TEXTURE_2D, 0, fmt, w, h, 0, fmt, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
+        stbi_image_free(data);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        stbi_image_free(data);
 
         cache[path] = id;
         return id;
